@@ -30,6 +30,7 @@ data/processed/**/*.csv
 # Documentation and planning artifacts
 docs/
 _bmad-output/
+_bmad/
 
 # OS
 .DS_Store
