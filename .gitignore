@@ -46,3 +46,6 @@ models/*.joblib
 *.log
 .cache/
 tmp/
+
+# Github
+.github/
