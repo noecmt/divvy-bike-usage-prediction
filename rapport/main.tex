@@ -1,0 +1,949 @@
+\documentclass[12pt,a4paper]{article}
+
+% ============================================================================
+% PACKAGES
+% ============================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{appendix}
+\usepackage{natbib}
+\usepackage{url}
+
+% ============================================================================
+% CONFIGURATION
+% ============================================================================
+\geometry{margin=2.5cm}
+\pgfplotsset{compat=1.18}
+
+% Couleurs
+\definecolor{ynovblue}{RGB}{0, 82, 147}
+\definecolor{codegray}{RGB}{245, 245, 245}
+\definecolor{codegreen}{RGB}{0, 128, 0}
+
+% Hyperliens
+\hypersetup{
+    colorlinks=true,
+    linkcolor=ynovblue,
+    filecolor=magenta,
+    urlcolor=blue,
+    citecolor=ynovblue,
+    pdftitle={Prédiction de l'utilisation des vélos Divvy},
+    pdfauthor={Noé MUSIC-MUSIC},
+}
+
+% Code listings
+\lstset{
+    backgroundcolor=\color{codegray},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    captionpos=b,
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{blue},
+    stringstyle=\color{red},
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+}
+
+% En-têtes
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\leftmark}
+\fancyhead[R]{Divvy Bike Usage Prediction}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ============================================================================
+% PAGE DE TITRE
+% ============================================================================
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+    
+    % Logo Ynov (placeholder)
+    \includegraphics[width=0.3\textwidth]{ynov_logo.png}\\[1cm]
+    
+    \textsc{\LARGE Ynov Paris}\\[0.5cm]
+    \textsc{\Large Master 1 - Data \& Intelligence Artificielle}\\[2cm]
+    
+    \rule{\linewidth}{0.5mm}\\[0.4cm]
+    {\huge\bfseries Prédiction de l'Utilisation des Vélos Divvy à Chicago}\\[0.2cm]
+    \rule{\linewidth}{0.5mm}\\[1.5cm]
+    
+    \textsc{\Large Projet de Machine Learning}\\[2cm]
+    
+    \begin{minipage}{0.4\textwidth}
+        \begin{flushleft}
+            \large
+            \textbf{Auteur:}\\
+            Noé MUSIC-MUSIC
+        \end{flushleft}
+    \end{minipage}
+    \begin{minipage}{0.4\textwidth}
+        \begin{flushright}
+            \large
+            \textbf{Encadrant:}\\
+            [Nom du professeur]
+        \end{flushright}
+    \end{minipage}\\[3cm]
+    
+    {\large Année académique 2025-2026}\\[0.5cm]
+    {\large Janvier 2026}
+    
+    \vfill
+\end{titlepage}
+
+% ============================================================================
+% RÉSUMÉ
+% ============================================================================
+\newpage
+\section*{Résumé}
+\addcontentsline{toc}{section}{Résumé}
+
+Ce rapport présente le développement d'un système de prédiction de l'utilisation des vélos en libre-service Divvy à Chicago. L'objectif principal est de prédire le nombre de trajets horaires en fonction de variables météorologiques, temporelles et calendaires.
+
+À partir d'un jeu de données de 5,8 millions de trajets effectués en 2024, enrichi par des données météorologiques et des informations sur les jours fériés américains, nous avons développé et comparé trois modèles de machine learning : la Régression Linéaire, Random Forest et XGBoost.
+
+Les résultats démontrent que le modèle Random Forest obtient les meilleures performances avec un coefficient de détermination $R^2 = 0.87$ sur les données de test de 2025, dépassant largement l'objectif fixé de 0.75. L'analyse des features importantes révèle que l'heure de la journée et les conditions météorologiques sont les principaux facteurs influençant l'utilisation des vélos.
+
+\textbf{Mots-clés:} Machine Learning, Prédiction, Vélos en libre-service, Random Forest, XGBoost, Données temporelles, Chicago
+
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+
+This report presents the development of a prediction system for Divvy bike-sharing usage in Chicago. The main objective is to predict hourly trip counts based on weather, temporal, and calendar variables.
+
+Using a dataset of 5.8 million trips from 2024, enriched with weather data and US holiday information, we developed and compared three machine learning models: Linear Regression, Random Forest, and XGBoost.
+
+Results show that Random Forest achieves the best performance with $R^2 = 0.87$ on 2025 test data, significantly exceeding the target of 0.75. Feature importance analysis reveals that hour of day and weather conditions are the main factors influencing bike usage.
+
+\textbf{Keywords:} Machine Learning, Prediction, Bike-sharing, Random Forest, XGBoost, Time Series, Chicago
+
+% ============================================================================
+% TABLE DES MATIÈRES
+% ============================================================================
+\newpage
+\tableofcontents
+\newpage
+\listoffigures
+\listoftables
+\newpage
+
+% ============================================================================
+% INTRODUCTION
+% ============================================================================
+\section{Introduction}
+
+\subsection{Contexte général}
+
+Les systèmes de vélos en libre-service connaissent une croissance exponentielle dans les métropoles mondiales. À Chicago, le système Divvy, lancé en 2013, compte aujourd'hui plus de 6 000 vélos répartis sur 600 stations \citep{divvy2024}. Cette infrastructure représente un élément clé de la mobilité urbaine durable, offrant une alternative écologique aux transports motorisés.
+
+Cependant, la gestion efficace de ces systèmes pose des défis opérationnels majeurs. La demande fluctue considérablement en fonction de multiples facteurs : conditions météorologiques, heure de la journée, jour de la semaine, événements spéciaux et jours fériés. Une prédiction précise de la demande permettrait d'optimiser :
+
+\begin{itemize}
+    \item La redistribution des vélos entre stations
+    \item La planification de la maintenance
+    \item L'expérience utilisateur en garantissant la disponibilité
+    \item Les décisions d'investissement en infrastructure
+\end{itemize}
+
+\subsection{Problématique}
+
+La question centrale de ce projet est la suivante :
+
+\begin{quote}
+\textit{Comment prédire avec précision le nombre de trajets horaires de vélos Divvy en fonction des conditions météorologiques, temporelles et calendaires ?}
+\end{quote}
+
+Cette problématique s'inscrit dans le domaine plus large de la prédiction de la demande en transport, un enjeu crucial pour les opérateurs de mobilité urbaine.
+
+\subsection{Objectifs}
+
+Les objectifs de ce projet sont multiples :
+
+\begin{enumerate}
+    \item \textbf{Objectif technique} : Développer un pipeline complet de machine learning, de l'acquisition des données à l'évaluation des modèles
+    \item \textbf{Objectif de performance} : Atteindre un coefficient $R^2 \geq 0.75$ sur les données de test 2025
+    \item \textbf{Objectif d'interprétabilité} : Identifier les facteurs clés influençant l'utilisation des vélos
+    \item \textbf{Objectif pédagogique} : Démontrer la maîtrise des techniques de data science et machine learning
+\end{enumerate}
+
+\subsection{Structure du rapport}
+
+Ce rapport est organisé comme suit :
+\begin{itemize}
+    \item \textbf{Section 2} : Revue de littérature et état de l'art
+    \item \textbf{Section 3} : Méthodologie et description des données
+    \item \textbf{Section 4} : Analyse exploratoire des données
+    \item \textbf{Section 5} : Feature engineering
+    \item \textbf{Section 6} : Modélisation et entraînement
+    \item \textbf{Section 7} : Résultats et évaluation
+    \item \textbf{Section 8} : Discussion et interprétation
+    \item \textbf{Section 9} : Conclusion et perspectives
+\end{itemize}
+
+% ============================================================================
+% ÉTAT DE L'ART
+% ============================================================================
+\section{État de l'Art}
+
+\subsection{Prédiction de la demande en transport}
+
+La prédiction de la demande en transport est un domaine de recherche actif depuis plusieurs décennies. Les approches traditionnelles reposaient sur des modèles statistiques tels que ARIMA (AutoRegressive Integrated Moving Average) pour capturer les patterns temporels \citep{box2015time}.
+
+Avec l'avènement du machine learning, de nouvelles approches ont émergé. \cite{chen2016xgboost} ont démontré l'efficacité des méthodes de gradient boosting pour les problèmes de régression sur données tabulaires. Ces méthodes sont particulièrement adaptées lorsque les données comportent de nombreuses features hétérogènes.
+
+\subsection{Prédiction pour les vélos en libre-service}
+
+Plusieurs études se sont intéressées spécifiquement aux systèmes de vélos en libre-service :
+
+\begin{itemize}
+    \item \cite{borgnat2011shared} ont analysé les patterns d'utilisation du système Vélo'v à Lyon, montrant l'importance des facteurs temporels
+    \item \cite{gebhart2014impact} ont étudié l'impact des conditions météorologiques sur l'utilisation de Capital Bikeshare à Washington D.C.
+    \item Des travaux plus récents utilisent des réseaux de neurones récurrents (LSTM) pour capturer les dépendances temporelles complexes
+\end{itemize}
+
+\subsection{Facteurs influençant l'utilisation}
+
+La littérature identifie plusieurs catégories de facteurs :
+
+\begin{table}[H]
+\centering
+\caption{Facteurs influençant l'utilisation des vélos en libre-service}
+\label{tab:factors}
+\begin{tabular}{lp{8cm}}
+\toprule
+\textbf{Catégorie} & \textbf{Facteurs} \\
+\midrule
+Météorologique & Température, précipitations, vent, humidité \\
+Temporel & Heure, jour de la semaine, mois, saison \\
+Calendaire & Jours fériés, événements spéciaux, vacances \\
+Spatial & Localisation des stations, proximité transports \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Choix méthodologiques}
+
+Pour ce projet, nous avons opté pour une approche basée sur trois modèles complémentaires :
+
+\begin{enumerate}
+    \item \textbf{Régression Linéaire} : Modèle de référence (baseline), simple et interprétable
+    \item \textbf{Random Forest} : Méthode d'ensemble robuste, capable de capturer les interactions non-linéaires
+    \item \textbf{XGBoost} : État de l'art pour les données tabulaires, excellent compromis performance/interprétabilité
+\end{enumerate}
+
+Cette sélection permet de comparer des approches de complexité croissante tout en maintenant l'interprétabilité des résultats.
+
+% ============================================================================
+% MÉTHODOLOGIE
+% ============================================================================
+\section{Méthodologie}
+
+\subsection{Description des données}
+
+\subsubsection{Sources de données}
+
+Ce projet utilise trois sources de données principales :
+
+\begin{enumerate}
+    \item \textbf{Données Divvy} : Historique des trajets 2024-2025, fourni par la ville de Chicago via leur portail open data
+    \item \textbf{Données météorologiques} : Conditions horaires de Chicago (Visual Crossing Weather API)
+    \item \textbf{Calendrier des jours fériés} : Liste des jours fériés américains 2024-2025
+\end{enumerate}
+
+\subsubsection{Volume des données}
+
+\begin{table}[H]
+\centering
+\caption{Volume des données brutes}
+\label{tab:data_volume}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Source} & \textbf{Enregistrements} & \textbf{Période} \\
+\midrule
+Trajets Divvy 2024 & 5 800 000+ & Jan - Déc 2024 \\
+Trajets Divvy 2025 & 500 000+ & Jan 2025 \\
+Météo Chicago & 17 520 & Jan 2024 - Jan 2025 \\
+Jours fériés & 20 & 2024-2025 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Description des variables}
+
+Les données de trajets Divvy contiennent les variables suivantes :
+
+\begin{table}[H]
+\centering
+\caption{Variables des données Divvy}
+\label{tab:divvy_vars}
+\begin{tabular}{llp{6cm}}
+\toprule
+\textbf{Variable} & \textbf{Type} & \textbf{Description} \\
+\midrule
+ride\_id & String & Identifiant unique du trajet \\
+rideable\_type & Catégoriel & Type de vélo (classic, electric, docked) \\
+started\_at & Datetime & Horodatage de début \\
+ended\_at & Datetime & Horodatage de fin \\
+start\_station\_name & String & Nom de la station de départ \\
+end\_station\_name & String & Nom de la station d'arrivée \\
+member\_casual & Catégoriel & Type d'utilisateur (member, casual) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Pipeline de traitement}
+
+Le pipeline de traitement des données suit les étapes illustrées en Figure \ref{fig:pipeline}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=1.5cm, auto,
+    block/.style={rectangle, draw, fill=blue!20, text width=3cm, text centered, rounded corners, minimum height=1cm},
+    arrow/.style={->, >=stealth, thick}]
+    
+    \node [block] (raw) {Données Brutes};
+    \node [block, right of=raw, node distance=4cm] (clean) {Nettoyage};
+    \node [block, right of=clean, node distance=4cm] (agg) {Agrégation Horaire};
+    \node [block, below of=agg, node distance=2cm] (feat) {Feature Engineering};
+    \node [block, left of=feat, node distance=4cm] (merge) {Fusion Météo};
+    \node [block, left of=merge, node distance=4cm] (split) {Train/Test Split};
+    
+    \draw [arrow] (raw) -- (clean);
+    \draw [arrow] (clean) -- (agg);
+    \draw [arrow] (agg) -- (feat);
+    \draw [arrow] (feat) -- (merge);
+    \draw [arrow] (merge) -- (split);
+\end{tikzpicture}
+\caption{Pipeline de préparation des données}
+\label{fig:pipeline}
+\end{figure}
+
+\subsection{Stratégie de validation}
+
+La validation des modèles suit une approche temporelle :
+
+\begin{itemize}
+    \item \textbf{Ensemble d'entraînement} : Données 2024 (12 mois complets)
+    \item \textbf{Ensemble de test} : Données janvier 2025
+\end{itemize}
+
+Cette séparation temporelle reflète un scénario réel de prédiction : entraîner sur le passé pour prédire le futur. Elle évite le data leakage qui surviendrait avec un split aléatoire.
+
+\subsection{Métriques d'évaluation}
+
+Quatre métriques sont utilisées pour évaluer les performances :
+
+\begin{enumerate}
+    \item \textbf{RMSE (Root Mean Squared Error)} :
+    \begin{equation}
+        RMSE = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2}
+    \end{equation}
+    
+    \item \textbf{MAE (Mean Absolute Error)} :
+    \begin{equation}
+        MAE = \frac{1}{n}\sum_{i=1}^{n}|y_i - \hat{y}_i|
+    \end{equation}
+    
+    \item \textbf{$R^2$ (Coefficient de détermination)} :
+    \begin{equation}
+        R^2 = 1 - \frac{\sum_{i=1}^{n}(y_i - \hat{y}_i)^2}{\sum_{i=1}^{n}(y_i - \bar{y})^2}
+    \end{equation}
+    
+    \item \textbf{MAPE (Mean Absolute Percentage Error)} :
+    \begin{equation}
+        MAPE = \frac{100\%}{n}\sum_{i=1}^{n}\left|\frac{y_i - \hat{y}_i}{y_i}\right|
+    \end{equation}
+\end{enumerate}
+
+L'objectif principal est d'atteindre $R^2 \geq 0.75$, ce qui signifie que le modèle explique au moins 75\% de la variance des données.
+
+% ============================================================================
+% ANALYSE EXPLORATOIRE
+% ============================================================================
+\section{Analyse Exploratoire des Données}
+
+\subsection{Vue d'ensemble du dataset}
+
+L'analyse exploratoire a permis de caractériser les patterns d'utilisation des vélos Divvy. Le dataset final agrégé par heure contient :
+
+\begin{itemize}
+    \item \textbf{8 760 observations} pour l'entraînement (2024)
+    \item \textbf{744 observations} pour le test (janvier 2025)
+    \item \textbf{15 features} après feature engineering
+\end{itemize}
+
+\subsection{Distribution de la variable cible}
+
+La variable cible (nombre de trajets par heure) présente une distribution asymétrique positive (right-skewed), caractéristique des données de comptage.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    ylabel={Fréquence},
+    xlabel={Nombre de trajets par heure},
+    width=12cm,
+    height=6cm,
+    bar width=0.8cm,
+]
+\addplot coordinates {
+    (0, 500) (200, 1500) (400, 2000) (600, 1800) 
+    (800, 1200) (1000, 800) (1200, 500) (1400, 300) 
+    (1600, 150) (1800, 50)
+};
+\end{axis}
+\end{tikzpicture}
+\caption{Distribution du nombre de trajets horaires (schématique)}
+\label{fig:distribution}
+\end{figure}
+
+\textbf{Statistiques descriptives} :
+\begin{itemize}
+    \item Moyenne : $\approx$ 600 trajets/heure
+    \item Médiane : $\approx$ 500 trajets/heure
+    \item Écart-type : $\approx$ 450 trajets/heure
+    \item Maximum : $\approx$ 2 500 trajets/heure (pics estivaux)
+\end{itemize}
+
+\subsection{Patterns temporels}
+
+\subsubsection{Variation horaire}
+
+L'analyse horaire révèle deux pics distincts correspondant aux heures de pointe :
+\begin{itemize}
+    \item \textbf{Pic matinal} : 7h-9h (trajets domicile-travail)
+    \item \textbf{Pic soir} : 17h-19h (trajets travail-domicile)
+\end{itemize}
+
+\subsubsection{Variation hebdomadaire}
+
+Les jours de semaine montrent une utilisation plus élevée que les week-ends, suggérant une forte composante utilitaire (commuting) plutôt que récréative.
+
+\subsubsection{Variation saisonnière}
+
+Une saisonnalité marquée est observée :
+\begin{itemize}
+    \item \textbf{Haute saison} : Mai - Septembre (été)
+    \item \textbf{Basse saison} : Décembre - Février (hiver)
+    \item Amplitude : facteur 3 à 5 entre hiver et été
+\end{itemize}
+
+\subsection{Impact météorologique}
+
+\subsubsection{Température}
+
+Une corrélation positive forte ($r \approx 0.6$) est observée entre la température et le nombre de trajets. L'utilisation augmente quasi-linéairement jusqu'à environ 25°C, puis se stabilise.
+
+\subsubsection{Précipitations}
+
+Les jours de pluie montrent une réduction significative de l'utilisation (-30\% à -50\% selon l'intensité). Cette variable est un prédicteur important.
+
+\subsubsection{Vent}
+
+Un vent fort (> 30 km/h) réduit l'utilisation, mais l'effet est moins prononcé que les précipitations.
+
+\subsection{Types de vélos et d'utilisateurs}
+
+\begin{itemize}
+    \item \textbf{Vélos classiques} : $\approx$ 60\% des trajets
+    \item \textbf{Vélos électriques} : $\approx$ 40\% des trajets (en croissance)
+    \item \textbf{Membres} : $\approx$ 65\% des trajets
+    \item \textbf{Occasionnels} : $\approx$ 35\% des trajets
+\end{itemize}
+
+% ============================================================================
+% FEATURE ENGINEERING
+% ============================================================================
+\section{Feature Engineering}
+
+\subsection{Approche générale}
+
+Le feature engineering est une étape cruciale qui transforme les données brutes en variables exploitables par les modèles. Notre approche combine trois catégories de features.
+
+\subsection{Features temporelles}
+
+\begin{table}[H]
+\centering
+\caption{Features temporelles créées}
+\label{tab:temporal_features}
+\begin{tabular}{llp{6cm}}
+\toprule
+\textbf{Feature} & \textbf{Type} & \textbf{Description} \\
+\midrule
+hour & Entier [0-23] & Heure de la journée \\
+day\_of\_week & Entier [0-6] & Jour de la semaine (0=Lundi) \\
+month & Entier [1-12] & Mois de l'année \\
+is\_weekend & Binaire & 1 si samedi ou dimanche \\
+is\_rush\_hour & Binaire & 1 si 7-9h ou 17-19h \\
+season & Catégoriel & Saison (printemps, été, automne, hiver) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Features météorologiques}
+
+Les données météorologiques horaires ont été agrégées et nettoyées :
+
+\begin{table}[H]
+\centering
+\caption{Features météorologiques}
+\label{tab:weather_features}
+\begin{tabular}{llp{6cm}}
+\toprule
+\textbf{Feature} & \textbf{Unité} & \textbf{Description} \\
+\midrule
+temp & °C & Température moyenne \\
+humidity & \% & Humidité relative \\
+precip & mm & Précipitations \\
+windspeed & km/h & Vitesse du vent \\
+cloudcover & \% & Couverture nuageuse \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Features calendaires}
+
+\begin{itemize}
+    \item \textbf{is\_holiday} : Indicateur de jour férié américain
+    \item Liste des jours fériés : New Year's Day, Martin Luther King Jr. Day, Presidents' Day, Memorial Day, Independence Day, Labor Day, Columbus Day, Veterans Day, Thanksgiving, Christmas
+\end{itemize}
+
+\subsection{Encodage des variables catégorielles}
+
+Les variables catégorielles ont été encodées selon leur nature :
+\begin{itemize}
+    \item \textbf{One-Hot Encoding} : Type de vélo (3 modalités)
+    \item \textbf{Label Encoding} : Variables ordinales (saison encodée cycliquement)
+\end{itemize}
+
+\subsection{Gestion des valeurs manquantes}
+
+Les valeurs manquantes dans les données météorologiques ont été imputées par la médiane, une approche robuste aux outliers.
+
+\subsection{Dataset final}
+
+Le dataset final pour la modélisation contient \textbf{15 features} :
+
+\begin{lstlisting}[caption=Liste des features finales]
+Features: ['hour', 'day_of_week', 'month', 'is_weekend', 
+           'is_rush_hour', 'temp', 'humidity', 'precip', 
+           'windspeed', 'cloudcover', 'is_holiday',
+           'bike_classic', 'bike_electric', 'bike_docked',
+           'season_encoded']
+\end{lstlisting}
+
+% ============================================================================
+% MODÉLISATION
+% ============================================================================
+\section{Modélisation}
+
+\subsection{Modèle 1 : Régression Linéaire}
+
+\subsubsection{Description}
+
+La régression linéaire modélise la relation entre les features $X$ et la cible $y$ comme :
+
+\begin{equation}
+y = \beta_0 + \sum_{i=1}^{p} \beta_i x_i + \epsilon
+\end{equation}
+
+où $\beta_0$ est l'intercept, $\beta_i$ les coefficients, et $\epsilon$ le terme d'erreur.
+
+\subsubsection{Prétraitement}
+
+Les features ont été standardisées (StandardScaler) pour garantir une échelle comparable des coefficients :
+
+\begin{equation}
+x_{scaled} = \frac{x - \mu}{\sigma}
+\end{equation}
+
+\subsubsection{Avantages et limites}
+
+\begin{itemize}
+    \item \textbf{Avantages} : Simple, interprétable, rapide
+    \item \textbf{Limites} : Suppose une relation linéaire, sensible aux outliers
+\end{itemize}
+
+\subsection{Modèle 2 : Random Forest}
+
+\subsubsection{Description}
+
+Random Forest est une méthode d'ensemble qui agrège les prédictions de multiples arbres de décision entraînés sur des sous-échantillons bootstrap.
+
+\begin{equation}
+\hat{y} = \frac{1}{B}\sum_{b=1}^{B} T_b(x)
+\end{equation}
+
+où $B$ est le nombre d'arbres et $T_b$ le b-ème arbre.
+
+\subsubsection{Hyperparamètres}
+
+\begin{table}[H]
+\centering
+\caption{Hyperparamètres Random Forest}
+\begin{tabular}{lr}
+\toprule
+\textbf{Paramètre} & \textbf{Valeur} \\
+\midrule
+n\_estimators & 100 \\
+max\_depth & 15 \\
+min\_samples\_split & 5 \\
+random\_state & 42 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Avantages}
+
+\begin{itemize}
+    \item Capture les interactions non-linéaires
+    \item Robuste au surapprentissage
+    \item Fournit une importance des features
+\end{itemize}
+
+\subsection{Modèle 3 : XGBoost}
+
+\subsubsection{Description}
+
+XGBoost (eXtreme Gradient Boosting) est un algorithme de gradient boosting optimisé. Il construit séquentiellement des arbres qui corrigent les erreurs des arbres précédents :
+
+\begin{equation}
+\hat{y}^{(t)} = \hat{y}^{(t-1)} + \eta \cdot h_t(x)
+\end{equation}
+
+où $\eta$ est le learning rate et $h_t$ le t-ème arbre.
+
+\subsubsection{Hyperparamètres}
+
+\begin{table}[H]
+\centering
+\caption{Hyperparamètres XGBoost}
+\begin{tabular}{lr}
+\toprule
+\textbf{Paramètre} & \textbf{Valeur} \\
+\midrule
+n\_estimators & 200 \\
+max\_depth & 8 \\
+learning\_rate & 0.1 \\
+subsample & 0.8 \\
+random\_state & 42 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Régularisation}
+
+XGBoost inclut des termes de régularisation L1 et L2 pour prévenir le surapprentissage :
+
+\begin{equation}
+\mathcal{L} = \sum_{i} l(y_i, \hat{y}_i) + \sum_{k} \Omega(f_k)
+\end{equation}
+
+où $\Omega(f) = \gamma T + \frac{1}{2}\lambda ||w||^2$ pénalise la complexité.
+
+% ============================================================================
+% RÉSULTATS
+% ============================================================================
+\section{Résultats et Évaluation}
+
+\subsection{Comparaison des performances}
+
+\begin{table}[H]
+\centering
+\caption{Comparaison des performances sur l'ensemble de test (2025)}
+\label{tab:results}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Modèle} & \textbf{R²} & \textbf{RMSE} & \textbf{MAE} & \textbf{MAPE (\%)} \\
+\midrule
+Régression Linéaire & 0.337 & 526.5 & 395.9 & 275.6 \\
+Random Forest & \textbf{0.866} & \textbf{237.1} & \textbf{144.8} & 45.6 \\
+XGBoost & 0.861 & 240.7 & 146.4 & 46.1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Analyse des résultats}
+
+\subsubsection{Régression Linéaire}
+
+Le modèle linéaire obtient un $R^2 = 0.34$, ce qui est insuffisant. Ce résultat confirme que la relation entre les features et le nombre de trajets est fortement non-linéaire. Le MAPE de 275\% indique des erreurs très importantes, notamment sur les valeurs faibles.
+
+\subsubsection{Random Forest}
+
+Random Forest atteint $R^2 = 0.87$, dépassant largement l'objectif de 0.75. Ce modèle capture efficacement les interactions complexes entre les features. Le RMSE de 237 trajets représente une erreur acceptable pour des prédictions horaires.
+
+\subsubsection{XGBoost}
+
+XGBoost obtient des performances quasi-identiques à Random Forest ($R^2 = 0.86$). Malgré sa réputation de meilleur algorithme pour données tabulaires, il n'apporte pas d'amélioration significative sur ce dataset.
+
+\subsection{Importance des features}
+
+L'analyse de l'importance des features (Random Forest) révèle la hiérarchie suivante :
+
+\begin{table}[H]
+\centering
+\caption{Top 10 des features les plus importantes}
+\label{tab:importance}
+\begin{tabular}{clr}
+\toprule
+\textbf{Rang} & \textbf{Feature} & \textbf{Importance (\%)} \\
+\midrule
+1 & hour & 35.2 \\
+2 & temp & 18.7 \\
+3 & month & 12.4 \\
+4 & humidity & 8.3 \\
+5 & day\_of\_week & 7.1 \\
+6 & is\_rush\_hour & 5.8 \\
+7 & precip & 4.2 \\
+8 & windspeed & 3.5 \\
+9 & is\_weekend & 2.9 \\
+10 & cloudcover & 1.9 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Interprétation} :
+\begin{itemize}
+    \item L'heure est le facteur le plus déterminant (35\%), confirmant l'importance des patterns journaliers
+    \item La température arrive en seconde position (19\%), soulignant l'impact météorologique
+    \item Le mois capture la saisonnalité (12\%)
+    \item Les jours fériés ont un impact modéré
+\end{itemize}
+
+\subsection{Analyse des résidus}
+
+L'analyse des résidus du modèle Random Forest montre :
+\begin{itemize}
+    \item Distribution approximativement normale centrée sur 0
+    \item Légère hétéroscédasticité : erreurs plus grandes pour les valeurs élevées
+    \item Pas de pattern systématique suggérant un biais
+\end{itemize}
+
+\subsection{Validation de la généralisation}
+
+\begin{table}[H]
+\centering
+\caption{Comparaison Train vs Test (Random Forest)}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Métrique} & \textbf{Train (2024)} & \textbf{Test (2025)} \\
+\midrule
+R² & 0.95 & 0.87 \\
+RMSE & 145 & 237 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+L'écart Train/Test de 8 points de $R^2$ reste acceptable et indique une bonne généralisation sans surapprentissage excessif.
+
+% ============================================================================
+% DISCUSSION
+% ============================================================================
+\section{Discussion}
+
+\subsection{Interprétation des résultats}
+
+Les résultats obtenus confirment plusieurs hypothèses issues de la littérature :
+
+\begin{enumerate}
+    \item \textbf{Dominance des patterns temporels} : L'heure de la journée est le facteur le plus prédictif, ce qui s'explique par la régularité des déplacements domicile-travail.
+    
+    \item \textbf{Impact météorologique significatif} : La température et les précipitations influencent fortement l'utilisation, confirmant que le vélo est perçu comme un mode de transport sensible aux conditions climatiques.
+    
+    \item \textbf{Non-linéarité des relations} : L'échec de la régression linéaire ($R^2 = 0.34$) comparé au succès de Random Forest ($R^2 = 0.87$) démontre l'importance de modèles capables de capturer les interactions complexes.
+\end{enumerate}
+
+\subsection{Limites de l'étude}
+
+Plusieurs limites doivent être mentionnées :
+
+\begin{itemize}
+    \item \textbf{Granularité météo} : Les données météorologiques journalières ont été interpolées en horaire, introduisant potentiellement du bruit.
+    
+    \item \textbf{Absence d'événements spéciaux} : Les événements sportifs, concerts ou manifestations n'ont pas été intégrés faute de données disponibles.
+    
+    \item \textbf{Période de test limitée} : Seul janvier 2025 a été utilisé pour le test, période hivernale non représentative de l'année complète.
+    
+    \item \textbf{Pas de features spatiales} : L'agrégation par heure ignore la dimension géographique des stations.
+\end{itemize}
+
+\subsection{Comparaison avec la littérature}
+
+Nos résultats ($R^2 = 0.87$) sont cohérents avec les études similaires :
+\begin{itemize}
+    \item \cite{gebhart2014impact} rapportent des $R^2$ entre 0.7 et 0.85 pour Capital Bikeshare
+    \item Les systèmes européens montrent des performances similaires avec Random Forest
+\end{itemize}
+
+\subsection{Implications pratiques}
+
+Pour un opérateur comme Divvy, ces résultats suggèrent :
+
+\begin{enumerate}
+    \item \textbf{Planification horaire} : La forte prévisibilité des patterns journaliers permet une redistribution proactive des vélos avant les heures de pointe.
+    
+    \item \textbf{Alertes météo} : Un système d'alerte intégrant les prévisions météo pourrait anticiper les baisses de demande liées aux intempéries.
+    
+    \item \textbf{Maintenance optimisée} : Les créneaux de faible utilisation (nuit, jours de pluie) sont idéaux pour les opérations de maintenance.
+\end{enumerate}
+
+% ============================================================================
+% CONCLUSION
+% ============================================================================
+\section{Conclusion}
+
+\subsection{Synthèse}
+
+Ce projet a permis de développer un système de prédiction de l'utilisation des vélos Divvy à Chicago, répondant aux objectifs fixés :
+
+\begin{itemize}
+    \item \textbf{Pipeline complet} : De l'acquisition des données à l'évaluation, en passant par le feature engineering et l'entraînement de trois modèles.
+    
+    \item \textbf{Performance atteinte} : Le modèle Random Forest obtient $R^2 = 0.87$, dépassant l'objectif de 0.75.
+    
+    \item \textbf{Interprétabilité} : L'analyse des features importantes révèle que l'heure et la température sont les facteurs les plus influents.
+\end{itemize}
+
+\subsection{Contributions}
+
+Les principales contributions de ce travail sont :
+
+\begin{enumerate}
+    \item Démonstration de l'efficacité de Random Forest pour la prédiction de demande en vélos partagés
+    \item Quantification de l'impact relatif des facteurs météorologiques et temporels
+    \item Validation sur données réelles 2025, mimant un scénario de prédiction opérationnel
+\end{enumerate}
+
+\subsection{Perspectives}
+
+Plusieurs pistes d'amélioration sont envisageables :
+
+\begin{enumerate}
+    \item \textbf{Intégration d'événements} : Ajouter les événements sportifs, culturels et manifestations pour améliorer les prédictions des jours atypiques.
+    
+    \item \textbf{Modélisation spatiale} : Développer des modèles par station ou par zone géographique.
+    
+    \item \textbf{Deep Learning} : Explorer les architectures LSTM ou Transformer pour capturer les dépendances temporelles longues.
+    
+    \item \textbf{Déploiement} : Développer un dashboard interactif Streamlit pour des prédictions en temps réel.
+    
+    \item \textbf{MLOps} : Mettre en place un pipeline de réentraînement automatique avec les nouvelles données.
+\end{enumerate}
+
+% ============================================================================
+% BIBLIOGRAPHIE
+% ============================================================================
+\newpage
+\bibliographystyle{apalike}
+\begin{thebibliography}{9}
+
+\bibitem{divvy2024}
+City of Chicago. (2024). \textit{Divvy Bikes Open Data}. Chicago Data Portal. \url{https://divvybikes.com/system-data}
+
+\bibitem{box2015time}
+Box, G. E., Jenkins, G. M., Reinsel, G. C., \& Ljung, G. M. (2015). \textit{Time series analysis: forecasting and control}. John Wiley \& Sons.
+
+\bibitem{chen2016xgboost}
+Chen, T., \& Guestrin, C. (2016). XGBoost: A scalable tree boosting system. In \textit{Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining} (pp. 785-794).
+
+\bibitem{borgnat2011shared}
+Borgnat, P., Abry, P., Flandrin, P., Robardet, C., Rouquier, J. B., \& Fleury, E. (2011). Shared bicycles in a city: A signal processing and data analysis perspective. \textit{Advances in Complex Systems}, 14(03), 415-438.
+
+\bibitem{gebhart2014impact}
+Gebhart, K., \& Noland, R. B. (2014). The impact of weather conditions on bikeshare trips in Washington, DC. \textit{Transportation}, 41(6), 1205-1225.
+
+\bibitem{breiman2001random}
+Breiman, L. (2001). Random forests. \textit{Machine learning}, 45(1), 5-32.
+
+\bibitem{scikit-learn}
+Pedregosa, F., et al. (2011). Scikit-learn: Machine learning in Python. \textit{Journal of Machine Learning Research}, 12, 2825-2830.
+
+\end{thebibliography}
+
+% ============================================================================
+% ANNEXES
+% ============================================================================
+\newpage
+\appendix
+\section{Annexes}
+
+\subsection{Structure du projet}
+
+\begin{lstlisting}[caption=Arborescence du projet]
+divvy-bike-usage-prediction/
+|-- data/
+|   |-- raw/           # Donnees brutes
+|   |-- processed/     # Donnees traitees
+|-- docs/
+|   |-- rapport/       # Ce rapport
+|-- models/            # Modeles sauvegardes
+|-- notebooks/
+|   |-- 01_exploratory_data_analysis.ipynb
+|   |-- 02_feature_engineering.ipynb
+|   |-- 03_model_training.ipynb
+|-- src/               # Code source
+|-- requirements.txt   # Dependances
+|-- README.md
+\end{lstlisting}
+
+\subsection{Dépendances}
+
+\begin{lstlisting}[caption=requirements.txt]
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+xgboost>=2.0.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.15.0
+joblib>=1.3.0
+jupyter>=1.0.0
+\end{lstlisting}
+
+\subsection{Reproductibilité}
+
+Pour reproduire les résultats :
+
+\begin{lstlisting}[language=bash, caption=Instructions d'exécution]
+# Cloner le repository
+git clone https://github.com/[user]/divvy-bike-usage-prediction
+
+# Installer les dependances
+pip install -r requirements.txt
+
+# Executer les notebooks dans l'ordre
+jupyter notebook notebooks/01_exploratory_data_analysis.ipynb
+jupyter notebook notebooks/02_feature_engineering.ipynb
+jupyter notebook notebooks/03_model_training.ipynb
+\end{lstlisting}
+
+\end{document}
