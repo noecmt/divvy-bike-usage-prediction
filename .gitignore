@@ -37,7 +37,6 @@ _bmad/
 Thumbs.db
 
 # Model artifacts
-models/*.pkl
 models/*.joblib
 *.h5
 *.pt
