@@ -1,0 +1,568 @@
+% Présentation : Prédiction de l'utilisation des vélos Divvy à Chicago
+
+\documentclass[10pt, aspectratio=169]{beamer}
+
+\usetheme{Madrid}           
+
+\usecolortheme{default}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage[table]{xcolor}
+\usepackage{tikz}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[T1]{fontenc}
+
+% Configuration des couleurs
+\definecolor{divvyblue}{RGB}{0, 114, 206}
+\definecolor{divvyorange}{RGB}{255, 131, 0}
+\definecolor{darkgray}{RGB}{64, 64, 64}
+
+\setbeamercolor{structure}{fg=divvyblue}
+\setbeamercolor{alerted text}{fg=divvyorange}
+
+% Configuration de la présentation
+\title{Prédiction de l'utilisation des vélos Divvy à Chicago}
+\subtitle{Impact de la météo et des facteurs temporels}
+\author{Noé Cramette}
+\institute{M1 Data \& IA - Ynov Paris\\Machine Learning}
+\date{19 Janvier 2026}
+
+% Configuration du chemin des images
+\graphicspath{{./img/}{./figures/}}
+
+% Numérotation des slides
+\setbeamertemplate{footline}[frame number]
+
+\begin{document}
+
+% SLIDE 1 : Page de Titre
+{
+\setbeamertemplate{footline}{} % Pas de numéro sur la page de titre
+\begin{frame}
+    \titlepage
+\end{frame}
+}
+
+% SLIDE 2 : Contexte & Problématique
+\begin{frame}{Contexte \& Problématique}
+    \begin{columns}[T]
+        \column{0.55\textwidth}
+        \vspace{0.5cm}
+        \textbf{Divvy :} Système de vélos partagés de Chicago
+        \begin{itemize}
+            \item 5,8M de trajets en 2024
+            \item 700+ stations
+            \item Usage très variable selon conditions
+        \end{itemize}
+        
+        \vspace{0.5cm}
+        \textbf{Problématique :}
+        \begin{itemize}
+            \item Comment prédire le nombre de trajets par heure ?
+            \item Quels facteurs influencent le plus l'usage ?
+            \item Peut-on anticiper la demande pour optimiser la distribution ?
+        \end{itemize}
+        
+        \column{0.45\textwidth}
+        \begin{center}
+            \includegraphics[width=0.9\textwidth]{img/divvy_bike.png}
+        \end{center}
+    \end{columns}
+\end{frame}
+
+% SLIDE 3 : Données & Sources
+\begin{frame}{Données \& Sources}
+    \begin{center}
+        \textbf{Trois sources de données :}
+    \end{center}
+    
+    \vspace{0.5cm}
+    
+    \begin{table}[h]
+        \centering
+        \begin{tabular}{lll}
+            \toprule
+            \textbf{Source} & \textbf{Description} & \textbf{Volume} \\
+            \midrule
+            Divvy Trips & Historique 2024 + 2025 & 11,3M trajets \\
+            Météo & Température, précipitations, vent & 730 jours \\
+            Calendrier & Evènements US 2024 + 2025 & 22 jours \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+    
+    \vspace{0.5cm}
+    
+    \begin{block}{Target}
+        \centering
+        \Large Nombre de trajets par heure
+    \end{block}
+\end{frame}
+
+% SLIDE 4 : Pipeline ML - Vue d'ensemble
+\begin{frame}{Pipeline ML - Vue d'ensemble}
+    \begin{center}
+        \normalsize
+        \textcolor{divvyblue}{Données brutes} → \textcolor{divvyblue}{EDA} → \textcolor{divvyblue}{Feature Engineering} → \textcolor{divvyblue}{Modeling} → \textcolor{divvyblue}{Évaluation}
+        
+        \vspace{0.3cm}
+        
+        \normalsize
+        \begin{tabular}{ccccc}
+            ↓ & ↓ & ↓ & ↓ & ↓ \\
+            5.8M trips & Patterns & 15 features & 3 modèles & R² = 90\% \\
+        \end{tabular}
+    \end{center}
+    
+    \vspace{0.8cm}
+    
+    \textbf{4 étapes clés :}
+    \begin{enumerate}
+        \item \textbf{Exploration} : Comprendre les patterns d'usage
+        \item \textbf{Features} : Créer des variables pertinentes
+        \item \textbf{Modélisation} : Tester 3 algorithmes
+        \item \textbf{Validation} : Test sur données 2025
+    \end{enumerate}
+\end{frame}
+
+% SLIDE 5 : Étape 1 - Exploration des Données
+\begin{frame}{Étape 1 - Exploration des Données}
+    \begin{columns}[T]
+        \column{0.3\textwidth}
+        \textbf{Découvertes clés :}
+        \begin{itemize}
+            \item \textbf{Pics horaires} : 8h et 17h\\
+            {\small (trajets domicile-travail)}
+            \vspace{0.2cm}
+            \item \textbf{Semaine $!=$ Weekend}\\
+            {\small Patterns différents}
+            \vspace{0.2cm}
+            \item \textbf{Saisonnalité forte}\\
+            {\small Été $>$ Hiver}
+            \vspace{0.2cm}
+            \item  \textbf{Température}\\
+            {\small Corrélation positive forte}
+        \end{itemize}
+        
+        \column{0.7\textwidth}
+        \begin{center}
+            \includegraphics[width=0.9\textwidth]{img/heatmap_day_hour.png}
+        \end{center}
+    \end{columns}
+\end{frame}
+
+% SLIDE 6 : Impact Météo - Analyse Détaillée
+\begin{frame}{Impact des données - Analyse Détaillée}
+    \begin{columns}[T]
+        \column{0.45\textwidth}
+        \textbf{Relations identifiées :}
+        \begin{itemize}
+            \item \textbf{Température}\\
+            Relation importante
+            \vspace{0.3cm}
+            \item  \textbf{Pluie}\\
+            Impact négatif fort\\
+            {\small -30 à -50\% selon intensité}
+            \vspace{0.3cm}
+            \item \textbf{Vent}\\
+            {\small Impact modéré}
+        \end{itemize}
+        
+        \vspace{0.3cm}
+        \begin{alertblock}{Zone de confort}
+            \centering
+            15-25°C → Usage optimal
+        \end{alertblock}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Impact Météo - Graphique}
+    \begin{center}
+            \includegraphics[width=0.6\textwidth]{img/eda_composite_analysis.png}  
+    \end{center}
+\end{frame}
+
+% SLIDE 7 : Étape 2 - Feature Engineering
+\begin{frame}{Étape 2 - Feature Engineering}
+    \begin{center}
+        \large \textbf{15 features créées en 3 catégories}
+    \end{center}
+    
+    \vspace{0.5cm}
+    
+    \begin{columns}[T]
+        \column{0.30\textwidth}
+        \begin{block}{Temporelles (7)}
+            \small
+            \begin{itemize}
+                \item \texttt{hour}
+                \item \texttt{day\_of\_week}
+                \item \texttt{month}
+                \item \texttt{is\_weekend}
+                \item \texttt{season\_*}\\
+                {\tiny (one-hot encoded)}
+            \end{itemize}
+        \end{block}
+        
+        \column{0.30\textwidth}
+        \begin{block}{Météo (3)}
+            \small
+            \begin{itemize}
+                \item \texttt{temperature}
+                \item \texttt{precipitation}
+                \item \texttt{wind\_speed}
+            \end{itemize}
+        \end{block}
+        
+        \column{0.30\textwidth}
+        \begin{block}{Calendrier (1)}
+            \small
+            \begin{itemize}
+                \item \texttt{is\_holiday}
+            \end{itemize}
+        \end{block}
+    \end{columns}
+    
+    \vspace{0.5cm}
+    
+    \begin{alertblock}{Agrégation : HORAIRE}
+        \centering
+        8760 observations/an → Prédiction heure par heure
+    \end{alertblock}
+\end{frame}
+
+% SLIDE 8 : Étape 3 - Modélisation
+\begin{frame}{Étape 3 - Modélisation}
+    \begin{columns}[T]
+        \column{0.6\textwidth}
+        \textbf{3 modèles testés :}
+        
+        \vspace{0.3cm}
+        
+        \begin{enumerate}
+            \item \textbf{Linear Regression}
+            \begin{itemize}
+                \item Baseline simple
+                \item Relations linéaires uniquement
+            \end{itemize}
+            
+            \vspace{0.2cm}
+            
+            \item \textbf{Random Forest}
+            \begin{itemize}
+                \item Ensemble d'arbres de décision
+                \item Capture les non-linéarités
+            \end{itemize}
+            
+            \vspace{0.2cm}
+            
+            \item \textbf{XGBoost}
+            \begin{itemize}
+                \item Gradient Boosting optimisé
+                \item Amplification de gradient
+            \end{itemize}
+        \end{enumerate}
+        
+        \column{0.35\textwidth}
+        \begin{block}{Split temporel}
+            \textbf{Train :} 2024\\
+            {\small (8760 heures)}
+            
+            \vspace{0.3cm}
+            
+            \textbf{Test :} 2025\\
+            {\small (8758 heures)}
+        \end{block}
+
+        \begin{alertblock}{Agrégation : HORAIRE}
+        \centering
+        2024 est bisextile $\Rightarrow$ 366 jours
+        \\
+        2025 est une année normale $\Rightarrow$ 365 jours
+        \end{alertblock}
+    \end{columns}
+\end{frame}
+
+% SLIDE 9 : Résultats - Comparaison des Modèles 
+\begin{frame}{Résultats - Comparaison des Modèles}
+    \begin{center}
+        \large \textbf{Performance sur Test 2025}
+    \end{center}
+    
+    \vspace{0.3cm}
+    
+    \begin{table}[h]
+        \centering
+        \small
+        \begin{tabular}{lcccc}
+            \toprule
+            \textbf{Modèle} & \textbf{R²} & \textbf{RMSE} & \textbf{MAE} & \textbf{MAPE} \\
+            \midrule
+            Linear Regression & 38.6\% & 507 & 383 & 313\% \\
+            \rowcolor{green!20}
+            \textbf{Random Forest} & \textbf{89.9\%} & \textbf{205} & \textbf{122} & \textbf{34.5\%} \\
+            \rowcolor{green!15}
+            \textbf{XGBoost} & \textbf{89.6\%} & \textbf{209} & \textbf{124} & \textbf{36.2\%} \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+    
+    \vspace{0.5cm}
+    
+    \begin{alertblock}{}
+        \centering
+        \Large \textbf{Résultat clé : $\sim$90\% de variance expliquée !}
+    \end{alertblock}
+\end{frame}
+
+% SLIDE 10 : Visualisation des Prédictions
+\begin{frame}{Visualisation des Prédictions}       
+    \begin{center}
+        \includegraphics[width=0.80\textwidth]{img/predictions_vs_actuel_rf.png}
+    \end{center}
+    
+    \vspace{0.3cm}
+    
+    \begin{columns}[T]
+        \column{0.7\textwidth}
+        \textbf{Observations :}
+        \begin{itemize}
+            \item Pics correctement prédits
+            \item Tendances saisonnières capturées
+            \item Légères sous-estimations sur événements exceptionnels
+        \end{itemize}
+        
+        \column{0.3\textwidth}
+        {\small
+        \textcolor{blue}{Réalité}\\
+        \textcolor{orange}{Prédictions}
+        }
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Visualisation des Prédictions}
+    \begin{center}
+        \textbf{Prédictions vs Réalité (Random Forest)}
+    \end{center}
+    
+    \begin{columns}[T]
+        \column{0.7\textwidth}
+        \textbf{Observations :}
+        \begin{itemize}
+            \item Pics correctement prédits
+            \item Tendances saisonnières capturées
+            \item Légères sous-estimations sur événements exceptionnels
+        \end{itemize}
+        
+        \column{0.3\textwidth}
+        {\small
+        \textcolor{blue}{Réalité}\\
+        \textcolor{orange}{Prédictions}
+        }
+    \end{columns}
+\end{frame}
+
+% SLIDE 11 : Feature Importance - Quels facteurs comptent ?
+\begin{frame}{Feature Importance - Quels facteurs comptent ?}
+    \begin{columns}[c]
+        \column{0.5\textwidth}
+        \textbf{Top 5 des features (Random Forest) :}
+        
+        \vspace{0.3cm}
+        
+        \begin{enumerate}
+            \item \textbf{hour} (53\%)\\
+            {\small L'heure de la journée domine}
+            
+            \vspace{0.2cm}
+            
+            \item \textbf{temperature} (32\%)\\
+            {\small Facteur météo \#1}
+            
+            \vspace{0.2cm}
+            
+            \item \textbf{day\_of\_week} (4\%)\\
+            {\small Cycles hebdomadaires}
+            
+            \vspace{0.2cm}
+            
+            \item \textbf{wind speed} (3\%)\\
+            {\small }
+            
+            \vspace{0.2cm}
+            
+            \item \textbf{precipitation} (0.1\%)\\
+            {\small Impact pluie}
+        \end{enumerate}
+         
+        \column{0.35\textwidth}
+        \begin{block}{Insight}
+            \small Temporel $>$ Météo,\\
+            mais météo reste crucial
+        \end{block}    
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Feature Importance}
+    \begin{center}
+            \includegraphics[width=0.8\textwidth]{img/feature_importance.png}
+    \end{center}
+\end{frame}
+
+% SLIDE 12 : Analyse Critique - Limites
+\begin{frame}{Analyse Critique - Limites}
+    \begin{columns}[c]
+        \column{0.5\textwidth}
+        \begin{alertblock}{Overfitting détecté}
+            \small
+            \begin{itemize}
+                \item Train R² : 98.4\% (RF) et 99.7\% (XGB)
+                \item Test R² : 89.9\% (RF) et 89.6\% (XGB)
+                \item Gap : $\sim$8-10\%
+            \end{itemize}
+            \vspace{0.2cm}
+            $\rightarrow$ Modèles apprennent du bruit
+        \end{alertblock}
+        
+        \vspace{0.5cm}
+        
+        \textbf{Autres limites identifiées :}
+        \begin{itemize}
+            \item Pas d'information sur pannes/maintenance
+            \item Événements exceptionnels sous-prédits
+        \end{itemize}
+        
+        \column{0.5\textwidth}
+        \begin{center}
+            \vspace{0.5cm}
+            \includegraphics[width=0.95\textwidth]{img/train_test_gap.png}
+        \end{center}
+    \end{columns}
+\end{frame}
+
+% SLIDE 13 : Conclusion & Apports
+\begin{frame}{Conclusion}
+    \textbf{Ce qui a été fait :}
+    
+    \vspace{0.3cm}
+    
+    \begin{columns}[T]
+        \column{0.5\textwidth}
+        
+        \textbf{Pipeline ML complet}
+        \begin{itemize}
+            \item EDA → Features → Modeling → Evaluation
+        \end{itemize}
+        
+        \vspace{0.3cm}
+        
+        \textbf{Prédiction fiable} : 90\% de précision
+        \begin{itemize}
+            \item Modèles très satisfaisant
+        \end{itemize}
+        
+        \column{0.5\textwidth}
+        
+        \textbf{Insights actionnables} :
+        \begin{itemize}
+            \item Température = levier \#1 météo
+            \item Patterns temporels primordiaux
+            \item Pluie = impact négatif majeur
+        \end{itemize}
+    \end{columns}
+    
+    \vspace{0.5cm}
+    
+    \begin{center}
+        \Large
+        \textcolor{divvyblue}{\textbf{Pipeline ML → 5.8M données → 90\% précision}}
+    \end{center}
+\end{frame}
+
+% SLIDE 14 : Limites & Perspectives
+\begin{frame}{Limites \& Perspectives}
+    \begin{columns}[T]
+        \column{0.48\textwidth}
+        \textbf{Limites identifiées :}
+        
+        \vspace{0.3cm}
+        
+        \begin{alertblock}{Données}
+            \small
+            \begin{itemize}
+                \item Météo \textbf{journalière} (pas horaire)\\
+                {\small $\rightarrow$ Perte de précision intra-journée}
+                \vspace{0.1cm}
+                \item Événements incomplets\\
+                {\small $\rightarrow$ Concerts, festivals, évènements sportifs manquants}
+                \vspace{0.1cm}
+                \item Pas d'info maintenances/pannes\\
+                {\small $\rightarrow$ Baisse usage inexpliquée}
+            \end{itemize}
+        \end{alertblock}
+        
+        \vspace{0.1cm}
+        
+        \begin{alertblock}{Modèle}
+            \small
+            \begin{itemize}
+                \item Overfitting détecté (gap 8-10\%)
+                \item Pas de features temporelles avancées
+                \item Granularité globale uniquement
+            \end{itemize}
+        \end{alertblock}
+        
+        \column{0.48\textwidth}
+        \textbf{Pistes d'amélioration :}
+                
+        \begin{block}{Données enrichies}
+            \small
+            \begin{itemize}
+                \item Météo \textbf{horaire}
+                \item Calendrier événements complet
+                \item Logs maintenances système
+            \end{itemize}
+        \end{block}
+                
+        \begin{block}{Features avancées}
+            \small
+            \begin{itemize}
+                \item Moyennes mobiles (tendances)
+                \item Interactions heure $\times$ météo
+            \end{itemize}
+        \end{block}
+                
+        \begin{block}{Analyse spatiale}
+            \small
+            \begin{itemize}
+                \item \textbf{Prédiction par station}\\
+                \item Clustering stations similaires
+            \end{itemize}
+        \end{block}
+    \end{columns}
+\end{frame}
+
+% SLIDE 15 
+\begin{frame}[plain]
+    \begin{center}
+        \vspace{2cm}
+        
+        {\Huge \textcolor{divvyblue}{\textbf{Merci pour votre attention !}}}
+        
+        \vspace{1cm}
+        
+        \Large
+        Noé Cramette\\
+        M1 Data \& IA - Ynov Paris\\
+        
+        \vspace{0.5cm}
+    \end{center}
+\end{frame}
+
+\end{document}
