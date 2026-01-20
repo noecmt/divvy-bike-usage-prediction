@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.Python
+venv/
+env/
+ENV/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data (keep directory structure, ignore large files)
+data/raw/divvy/*.zip
+data/raw/divvy/*.csv
+data/raw/weather/*.csv
+
+# Models (optional - uncomment if you want to rebuild models)
+# models/*.pkl
+# models/*.joblib
+
+# BMAD output artifacts (optional)
+_bmad-output/
+_bmad/bmm/testarch/
+
+# Git
+.git/
+.gitignore
+
+# Docker
+.dockerignore
+
+# Logs
+*.log
+logs/
+
+# Cache
+.cache/
+.pytest_cache/
+
+# Reports
+rapport/*.pdf
+rapport/*.aux
+rapport/*.out
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
